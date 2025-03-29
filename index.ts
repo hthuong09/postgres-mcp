@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import dotenv from "dotenv";
+import dotenvExpand from "dotenv-expand";
 
 const dotenvPath = process.env.DOTENV_PATH
   ? {
@@ -7,7 +8,7 @@ const dotenvPath = process.env.DOTENV_PATH
     }
   : { path: `${process.env.PWD}/.env` }; // This is workaround for Cursor as it always run command in root directory;
 
-dotenv.config(dotenvPath);
+dotenvExpand.expand(dotenv.config(dotenvPath));
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
