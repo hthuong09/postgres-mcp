@@ -1,0 +1,54 @@
+name: Auto Tag Version
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "package.json"
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: package_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: tag_check
+        run: |
+          TAG_EXISTS=$(git tag -l "v${{ steps.package_version.outputs.version }}")
+          echo "exists=$TAG_EXISTS" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        if: "steps.tag_check.outputs.exists == ''"
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+          git tag "v${{ steps.package_version.outputs.version }}"
+          git push origin "v${{ steps.package_version.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        if: "steps.tag_check.outputs.exists == ''"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.package_version.outputs.version }}" \
+            --title "v${{ steps.package_version.outputs.version }}" \
+            --generate-notes \
+            --draft=false
