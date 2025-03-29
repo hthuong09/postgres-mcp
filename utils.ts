@@ -32,7 +32,9 @@ function buildConnectionString(config: DatabaseConfig): string {
   return url.toString();
 }
 
-export function loadDatabaseConfig(commandLineUrl?: string): DatabaseConfig {
+export function loadDatabaseConfig(
+  commandLineUrl?: string
+): DatabaseConfig | undefined {
   // Priority 1: Environment variable POSTGRES_URL
   if (process.env.POSTGRES_URL) {
     return {
@@ -69,13 +71,6 @@ export function loadDatabaseConfig(commandLineUrl?: string): DatabaseConfig {
       schema: process.env.POSTGRES_SCHEMA || "public",
     };
   }
-
-  throw new Error(
-    "No valid database configuration found. Please provide either:\n" +
-      "1. POSTGRES_URL environment variable\n" +
-      "2. Individual environment variables (POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER)\n" +
-      "3. Command line URL argument"
-  );
 }
 
 export function constructResourceBaseUrl(config: DatabaseConfig): URL {
@@ -96,4 +91,10 @@ export function constructResourceBaseUrl(config: DatabaseConfig): URL {
   baseUrl.password = "";
 
   return baseUrl;
+}
+
+export function parseEnv(str: string): string {
+  return str.replace(/\{process\.env\.(\w+)}/g, (match, p1) => {
+    return process.env[p1] || match;
+  });
 }

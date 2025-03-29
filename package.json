@@ -1,6 +1,6 @@
 {
   "name": "@hthuong09/postgres-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for interacting with PostgreSQL databases",
   "license": "MIT",
   "author": "hthuong09",

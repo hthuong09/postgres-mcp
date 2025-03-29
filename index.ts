@@ -1,19 +1,13 @@
 #!/usr/bin/env node
 import dotenv from "dotenv";
 
-const pwd = process.env.PWD ?? "";
-const home = process.env.HOME ?? "";
+const dotenvPath = process.env.DOTENV_PATH
+  ? {
+      path: parseEnv(process.env.DOTENV_PATH),
+    }
+  : { path: `${process.env.PWD}/.env` }; // This is workaround for Cursor as it always run command in root directory;
 
-dotenv.config(
-  process.env.DOTENV_PATH
-    ? {
-        path: process.env.DOTENV_PATH.replace("{home}", home).replace(
-          "{pwd}",
-          pwd
-        ),
-      }
-    : { path: `${pwd}/.env` } // This is workaround for Cursor as it always run command in root directory
-);
+dotenv.config(dotenvPath);
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -24,7 +18,12 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import pg from "pg";
-import { loadDatabaseConfig, constructResourceBaseUrl } from "./config.js";
+import {
+  loadDatabaseConfig,
+  constructResourceBaseUrl,
+  parseEnv,
+} from "./utils.js";
+import { appendFileSync } from "fs";
 
 const server = new Server(
   {
@@ -44,6 +43,30 @@ const commandLineUrl = args.length > 0 ? args[0] : undefined;
 
 try {
   const config = loadDatabaseConfig(commandLineUrl);
+  if (process.env.DEBUG_MCP === "true") {
+    const debug = {
+      dotenvPath,
+      config,
+      processEnv: process.env,
+      args: args,
+    };
+    appendFileSync(
+      `${
+        process.env.TEMP || process.env.TMP || "/tmp"
+      }/postgres-mcp-debug.json`,
+      `${new Date().toISOString()}:\n${JSON.stringify(debug, null, 2)}\n\n`
+    );
+  }
+
+  if (!config) {
+    throw new Error(
+      "No valid database configuration found. Please provide either:\n" +
+        "1. POSTGRES_URL environment variable\n" +
+        "2. Individual environment variables (POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER)\n" +
+        "3. Command line URL argument"
+    );
+  }
+
   const resourceBaseUrl = constructResourceBaseUrl(config);
   const pool = new pg.Pool(config);
 
